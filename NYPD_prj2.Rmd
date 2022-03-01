@@ -1,0 +1,316 @@
+---
+title: "NYPD_prj"
+author: "VRG"
+date: "February 28, 2022"
+output:
+  html_document: default
+  pdf_document: 
+    fig_caption: yes
+---
+
+### IMPORT the libraries for the project.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Library
+#install.packages("ggplot2") 
+# Install & load ggplot2 package
+
+
+library(dplyr)
+library(tidyr)
+library("gridExtra")
+library(sqldf)
+library("ggplot2")
+
+```
+
+
+
+## R Markdown
+ 
+This data set has a list of every shooting incident that occurred in NYC going back to 2006 through the end of the previous calendar year.
+
+This is a breakdown of every shooting incident that occurred in NYC going back to 2006 through the end of the previous calendar year. This data is manually extracted every quarter and reviewed by the Office of Management Analysis and Planning before being posted on the NYPD website. Each record represents a shooting incident in NYC and includes information about the event, the location and time of occurrence. In addition, information related to suspect and victim demographics is also included. This data can be used by the public to explore the nature of shooting/criminal activity. Please refer to the attached data footnotes for additional information about this dataset.
+
+
+### Source/ Reference : [https://data.cityofnewyork.us/Public-Safety/NYPD-Shooting-Incident-Data-Historic-/833y-fsy8]
+
+
+
+# Import data and About the data set
+
+```{r , echo=FALSE}   
+library(readr)   
+DS <- read_csv("https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD")
+
+```      
+
+```{r, echo=FALSE}
+summary(DS)
+
+```
+
+## Preprocessing - Combine Date and change format to Date.
+
+```{r, echo=FALSE}   
+
+## Preprocessing
+
+DS$OCCUR_DATE <- paste(DS$OCCUR_DATE, DS$OCCUR_TIME, sep=" ") # Convert to Date with " "
+
+```    
+
+
+
+```{r, echo=FALSE}   
+#Tidying and Transforming 
+
+DS[['OCCUR_DATE']] <- strptime(DS[['OCCUR_DATE']], format = "%m/%d/%Y %H:%M:%S")
+
+DS[['OCCUR_DATE_TIME']] <- as.POSIXct(DS$OCCUR_DATE,tz=Sys.timezone())  # Date_Time column
+
+DS$OCCUR_DATE <- as.Date(DS$OCCUR_DATE)
+
+summary(DS)   
+head(DS)   
+
+DS[, c('OCCUR_DATE_TIME','OCCUR_DATE','OCCUR_TIME','INCIDENT_KEY' ,'JURISDICTION_CODE', 'LOCATION_DESC','BORO', 'PRECINCT', 'STATISTICAL_MURDER_FLAG','PERP_RACE', 'PERP_AGE_GROUP', 'PERP_SEX', 'VIC_AGE_GROUP', 'VIC_SEX', 'VIC_RACE','Latitude','Longitude','Lon_Lat')]
+
+DS$PERP_RACE[is.na(DS$PERP_RACE)]  <- 'UNKNOWN'
+
+```    
+
+  
+```{r, echo=FALSE}    
+#Select fetures  
+
+#DS %>% group_by(BORO) %>% summarise(count_incidents = n())
+
+DS_Plot <- DS %>% group_by(BORO) %>% summarise(count_incidents = n())
+
+#View(DS)
+head(DS_Plot)
+```    
+
+
+#Select fetures    
+```{r, echo=FALSE}    
+
+#install.packages("sqldf")
+library(sqldf)
+
+DS_Plot <- DS %>% group_by(BORO,PERP_RACE) %>% summarise(count_incidents = n())
+
+#View(DS)
+View(DS_Plot)
+```  
+
+#Select fetures    
+```{r, echo=FALSE}    
+
+#install.packages("sqldf")
+
+
+DS_Plot_v <- DS %>% group_by(BORO,VIC_RACE) %>% summarise(count_incidents = n())
+
+#View(DS)
+#View(DS_Plot_v)
+```
+
+
+
+```{r, echo=FALSE}    
+#Visualize Data set
+# Library
+#install.packages("ggplot2")                       # Install & load ggplot2 package
+
+
+ggplot(DS_Plot_v,                                      # Grouped barplot using ggplot2
+       aes(x = BORO,
+           y = count_incidents,
+           fill = VIC_RACE)) +
+  geom_bar(stat = "identity",
+           position = "dodge")
+
+```
+
+
+```{r, echo=FALSE}    
+#Visualize Data set
+
+ggplot(DS_Plot,                                      # Grouped barplot using ggplot2
+       aes(x = BORO,
+           y = count_incidents,
+           fill = PERP_RACE)) +
+  geom_bar(stat = "identity",
+           position = "dodge")
+
+```
+
+
+
+```{r, echo=FALSE}    
+#Visualize Data set
+
+DS_Plot_t <- DS %>% group_by(OCCUR_DATE) %>% summarise(count_incidents = n())
+
+#View(DS)
+#View(DS_Plot_t)
+
+
+ggplot(DS_Plot_t,                                      # Grouped barplot using ggplot2
+       aes(x = OCCUR_DATE,
+           y = count_incidents)) +
+  geom_bar(stat = "identity",
+           position = "dodge")
+
+```
+
+
+
+
+```{r, echo=FALSE}    
+
+#Visualize Data set 
+DS$OCCUR_DATE_MONTH <- format(DS$OCCUR_DATE, "%m")
+
+DS_Plot_m <- DS %>% group_by(OCCUR_DATE_MONTH ) %>% summarise(count_incidents = n())
+
+#View(DS)
+#View(DS_Plot_m)
+
+
+ggplot(DS_Plot_m,                                      # Grouped barplot using ggplot2
+       aes(x = OCCUR_DATE_MONTH,
+           y = count_incidents)) +
+  geom_bar(stat = "identity",
+           position = "dodge")
+
+```
+
+
+
+
+  
+```{r, echo=FALSE}    
+#Visualize Data set 
+
+DS$OCCUR_TIME_HOUR <- format(strptime(DS$OCCUR_TIME,"%H:%M:%S"),'%H')
+
+DS_Plot_h <- DS %>% group_by(OCCUR_TIME_HOUR ) %>% summarise(count_incidents = n())
+
+#View(DS)
+#View(DS_Plot_m)
+
+
+ggplot(DS_Plot_h,                                      # Grouped barplot using ggplot2
+       aes(x = OCCUR_TIME_HOUR,
+           y = count_incidents)) +
+  geom_bar(stat = "identity",
+           position = "dodge")
+
+```
+
+
+
+
+
+```{r, echo=FALSE}    
+#Analyze Data set
+
+DS$OCCUR_TIME_HOUR <- format(strptime(DS$OCCUR_TIME,"%H:%M:%S"),'%H')
+
+DS_Plot_h_pr <- DS %>% group_by(OCCUR_TIME_HOUR,PERP_RACE ) %>% summarise(count_incidents = n())
+
+
+DS_Plot_h_pr$PERP_RACE[is.na(DS_Plot_h_pr$PERP_RACE)]  <- 'UNKNOWN'
+
+ggplot(DS_Plot_h_pr, aes(x = OCCUR_TIME_HOUR, y = count_incidents, fill = PERP_RACE)) + geom_bar(stat = "identity")
+```
+
+    
+```{r, echo=FALSE}    
+#Analyze Data set
+
+DS$OCCUR_TIME_HOUR <- format(strptime(DS$OCCUR_TIME,"%H:%M:%S"),'%H')
+
+DS_Plot_h_vic <- DS %>% group_by(OCCUR_TIME_HOUR,VIC_RACE) %>% summarise(count_incidents = n())
+
+ggplot(DS_Plot_h_vic, aes(x = OCCUR_TIME_HOUR, y = count_incidents, fill = VIC_RACE)) + geom_bar(stat = "identity")
+```
+    
+```{r, echo=FALSE}    
+#Visualize Data set
+
+Plot1 <- ggplot(DS_Plot_h_pr, aes(x = OCCUR_TIME_HOUR, y = count_incidents, fill = PERP_RACE)) + geom_bar(stat = "identity") +  theme(legend.position = "none")
+Plot2 <- ggplot(DS_Plot_h_vic, aes(x = OCCUR_TIME_HOUR, y = count_incidents, fill = VIC_RACE)) + geom_bar(stat = "identity") +  theme(legend.position = "none")
+grid.arrange(Plot1, Plot2, ncol=2)
+
+```
+
+
+```{r, echo=FALSE}    
+#Model Data set   
+
+DS_Plot_h_pr$OCCUR_TIME_HOUR <- as.numeric(DS_Plot_h_pr$OCCUR_TIME_HOUR)
+DS_Plot_h_vic$OCCUR_TIME_HOUR <- as.numeric(DS_Plot_h_vic$OCCUR_TIME_HOUR)
+
+fit1 = lm(count_incidents~OCCUR_TIME_HOUR, data=DS_Plot_h_vic)
+summary(fit1)
+
+
+```
+
+
+
+```{r, echo=FALSE}    
+#Visualize Model output
+
+Plot_lm <-ggplot(DS_Plot_h_vic, aes(x=OCCUR_TIME_HOUR, y=count_incidents)) + geom_point()
+
+Plot_lm <- Plot_lm + geom_smooth(method="lm", col="red")
+
+pred_lm = predict(fit1)
+
+Plot_lm <- Plot_lm + geom_line(aes(y = pred_lm), size = 1)
+
+Plot_lm
+
+```   
+
+```{r, echo=FALSE}    
+#Select fetures  
+
+#DS %>% group_by(BORO) %>% summarise(count_incidents = n())
+
+DS_map_plot <- DS %>% group_by(BORO) %>% summarise(count_incidents = n(), mean_lat = mean(Latitude,na.rm = TRUE), mean_long = mean(Longitude,na.rm = TRUE) )
+
+DS_map_plot$map_circ_rad <- (DS_map_plot$count_incidents/sum(DS_map_plot$count_incidents))*100
+
+#View(DS)
+head(DS_map_plot)
+```    
+ 
+ 
+ 
+```{r, echo=FALSE}    
+#Visualize Model output
+library(leaflet)
+# create leaflet map
+pal <- colorFactor(c("navy", "red", "green","orange","purple"),
+                   domain = unique(DS_map_plot$BORO))
+
+DS_ll <- leaflet(DS_map_plot) %>%
+  addTiles() %>%
+  addCircleMarkers(lng = ~mean_long,
+                   lat = ~mean_lat,
+                   color = ~pal(BORO),
+                   weight = 1, 
+                   radius = ~map_circ_rad,
+                   stroke = FALSE, fillOpacity = 0.9,
+                   label = ~as.character(count_incidents),
+                   popup = ~BORO)
+DS_ll
+
+```  
